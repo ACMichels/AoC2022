@@ -18,36 +18,34 @@ struct node {
 	int distance;
 };
 
+bool inBounds(int width, int height, int x, int y) {
+	return x >= 0 && y >= 0 && x < width && y < height;
+}
+
 int main() {
 	ifstream fin("input.txt");
-	
 	vector<string> field;
-	
 	string line;
+	pos start, end;
 	
-	while(getline(fin, line)) {
+	for(int i = 0; getline(fin, line); i++) {
 		field.push_back(line);
+		auto index = line.find('S');
+		if (index != line.npos) {
+			start = {index, i};
+			field[i][index] = 'a';
+		}
+		index = line.find('E');
+		if (index != line.npos) {
+			end = {index, i};
+			field[i][index] = 'z';
+		}
 	}
 	
 	int width = field[0].length();
 	int height = field.size();
 	
 	vector<vector<bool>> visited(height, vector<bool>(width, false));
-	
-	pos start, end;
-	
-	for (int i = 0; i < height; i++) {
-		for (int j = 0; j < width; j++) {
-			if (field[i][j] == 'S') {
-				start = {j, i};
-			} else if (field[i][j] == 'E') {
-				end = {j, i};
-			}
-		}
-	}
-	
-	field[start.y][start.x] = 'a';
-	field[end.y][end.x] = 'z';
 	
 	auto cmp = [](node n1, node n2) { return n1.distance > n2.distance; };
 	priority_queue<node, vector<node>, decltype(cmp)> pqueue(cmp);
@@ -67,23 +65,13 @@ int main() {
 			break;
 		}
 		
-		
-		if (current.p.x > 0 && !visited[current.p.y][current.p.x-1] && (field[current.p.y][current.p.x] - (int)field[current.p.y][current.p.x-1] >= -1 || field[current.p.y][current.p.x-1] == 'E' && field[current.p.y][current.p.x] >= 'y')) {
-			pqueue.push({{current.p.x-1, current.p.y}, current.distance + 1});
-		}
-		if (current.p.y > 0 && !visited[current.p.y-1][current.p.x] && (field[current.p.y][current.p.x] - (int)field[current.p.y-1][current.p.x] >= -1 || field[current.p.y-1][current.p.x] == 'E' && field[current.p.y][current.p.x] >= 'y')) {
-			pqueue.push({{current.p.x, current.p.y-1}, current.distance + 1});
-		}
-		
-		if (current.p.x < width-1 && !visited[current.p.y][current.p.x+1] && (field[current.p.y][current.p.x] - (int)field[current.p.y][current.p.x+1] >= -1 || field[current.p.y][current.p.x+1] == 'E' && field[current.p.y][current.p.x] >= 'y')) {
-			pqueue.push({{current.p.x+1, current.p.y}, current.distance + 1});
-		}
-		if (current.p.y < height-1 && !visited[current.p.y+1][current.p.x] && (field[current.p.y][current.p.x] - (int)field[current.p.y+1][current.p.x] >= -1 || field[current.p.y+1][current.p.x] == 'E' && field[current.p.y][current.p.x] >= 'y')) {
-			pqueue.push({{current.p.x, current.p.y+1}, current.distance + 1});
+		constexpr int mod[] = {0, 1, 0, -1, 0};
+		for (int i = 0; i < 4; i++) {
+			if (inBounds(width, height, current.p.x+mod[i+1], current.p.y+mod[i]) && !visited[current.p.y+mod[i]][current.p.x+mod[i+1]] && field[current.p.y][current.p.x] - (int)field[current.p.y+mod[i]][current.p.x+mod[i+1]] >= -1) {
+				pqueue.push({{current.p.x+mod[i+1], current.p.y+mod[i]}, current.distance + 1});
+			}
 		}
 	}
-	
-	
 	
 	return 0;
 }

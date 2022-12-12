@@ -1,137 +1,80 @@
 #include <iostream>
 #include <fstream>
-#include <set>
-#include <utility>
 #include <queue>
-#include <sstream>
 #include <algorithm>
-#include <numeric>
-
-#define ull unsigned long long
 
 using namespace std;
 
-struct Monkey{
-	queue<ull> items;
-	int operation;
-	ull operationValue = 0;
-	bool byItself = false;
-	int divisor;
-	int trueThrow;
-	int falseThrow;
-	int assessCount = 0;
+struct pos {
+	int x, y;
 };
+
+struct node {
+	pos p;
+	int distance;
+};
+
+bool inBounds(int width, int height, int x, int y) {
+	return x >= 0 && y >= 0 && x < width && y < height;
+}
+
+int findAndReplace(string& line, char find, char replace) {
+	auto index = line.find(find);
+	if (index != line.npos) {
+		line[index] = replace;
+		return index;
+	}
+	return -1;
+}
 
 int main() {
 	ifstream fin("input.txt");
-	
-	vector<Monkey> monkeys;
-	
+	vector<string> field;
 	string line;
-	string word;
+	pos start, end;
 	
-	ull totalMod = 1;
-	
-	while(getline(fin, line)) {
-		Monkey mk;
-		
-		// Items
-		getline(fin, line);
-		stringstream ss(line);
-		ss >> word;
-		int worryValue;
-		while(ss >> word >> worryValue) {
-			mk.items.push(worryValue);
+	for(int i = 0; getline(fin, line); i++) {
+		if (int index = findAndReplace(line, 'S', 'a'); index >= 0) {
+			start = {index, i};
 		}
-		
-		// Operator
-		getline(fin, line);
-		stringstream ss2(line);
-		char op;
-		string opWord;
-		ss2 >> word >> word >> word >> word >> op >> opWord;
-		if (op == '*') {
-			mk.operation = 0;
-		} else {
-			mk.operation = 1;
+		if (int index = findAndReplace(line, 'E', 'z'); index >= 0) {
+			end = {index, i};
 		}
-		if (opWord[0] == 'o') { // old*old
-			mk.byItself = true;
-		} else {
-			mk.operationValue = stoi(opWord);
-		}
-		
-		// Divisibility test
-		getline(fin, line);
-		stringstream ss3(line);
-		int div;
-		ss3 >> word >> word >> word >> div;
-		mk.divisor = div;
-		
-		totalMod = lcm(totalMod, div);
-		
-		// True
-		getline(fin, line);
-		stringstream ss4(line);
-		int monkeyTrue;
-		ss4 >> word >> word >> word >> word >> word >> monkeyTrue;
-		mk.trueThrow = monkeyTrue;
-		
-		// False
-		getline(fin, line);
-		stringstream ss5(line);
-		int monkeyFalse;
-		ss5 >> word >> word >> word >> word >> word >> monkeyFalse;
-		mk.falseThrow = monkeyFalse;
-		
-		getline(fin, line);
-		
-		monkeys.push_back(mk);
+		field.push_back(line);
 	}
 	
-	for (int t = 0; t < 10000; t++) {
-		for (int m = 0; m < monkeys.size(); m++) {
-			Monkey& mk = monkeys[m];
-			while(mk.items.size() > 0) {
-				ull item = mk.items.front();
-				mk.items.pop();
-				mk.assessCount++;
-				
-				// Operation
-				if (mk.byItself) {
-					mk.operationValue = item;
-				}
-				if (mk.operation == 0) { // *
-					item *= mk.operationValue;
-				} else {
-					item += mk.operationValue;
-				}
-				
-				item %= totalMod;
-				
-				// Throw
-				if (item % mk.divisor == 0) {
-					monkeys[mk.trueThrow].items.push(item);
-				} else {
-					monkeys[mk.falseThrow].items.push(item);
-				}
+	int width = field[0].length();
+	int height = field.size();
+	
+	vector<vector<bool>> visited(height, vector<bool>(width, false));
+	
+	auto cmp = [](node& n1, node& n2) { return n1.distance > n2.distance; };
+	priority_queue<node, vector<node>, decltype(cmp)> pqueue(cmp);
+	
+	pqueue.push({end, 0});
+	
+	while(pqueue.size() > 0) {
+		node current = pqueue.top();
+		pqueue.pop();
+		
+		if (visited[current.p.y][current.p.x]) {
+			continue;
+		}
+		visited[current.p.y][current.p.x] = true;
+		
+		if (field[current.p.y][current.p.x] == 'a') {
+			cout << current.distance << endl;
+			break;
+		}
+		
+		constexpr int mod[] = {0, 1, 0, -1, 0};
+		for (int i = 0; i < 4; i++) {
+			const int newX = current.p.x+mod[i+1];
+			const int newY = current.p.y+mod[i];
+			if (inBounds(width, height, newX, newY) && !visited[newY][newX] && field[current.p.y][current.p.x] - (int)field[newY][newX] <= 1) {
+				pqueue.push({{newX, newY}, current.distance + 1});
 			}
 		}
 	}
-	
-	
-	vector<ull> assessCounts;
-	for (Monkey& m : monkeys) {
-		assessCounts.push_back(m.assessCount);
-	}
-	sort(assessCounts.begin(), assessCounts.end(), greater<ull>());
-	
-	for (int v : assessCounts) {
-		cout << v << endl;
-	}
-	cout << endl;
-	
-	cout << assessCounts[0] * assessCounts[1] << endl;
-	
 	return 0;
 }
